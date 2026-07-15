@@ -46,9 +46,9 @@ import com.unitytunnel.app.ui.theme.MyApplicationTheme
 import com.unitytunnel.app.vpn.UnityTunnelVpnService
 import com.unitytunnel.app.viewmodel.BalanceViewModel
 import com.unitytunnel.app.viewmodel.VpnState
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdSize
-import com.google.android.gms.ads.AdView
+//import com.google.android.gms.ads.AdRequest
+//import com.google.android.gms.ads.AdSize
+//import com.google.android.gms.ads.AdView
 import kotlinx.coroutines.launch
 import java.util.Locale
 import com.unitytunnel.app.ads.RewardedAdService
@@ -69,8 +69,8 @@ class MainActivity : ComponentActivity() {
         AdManager.initialize(this) {
             // Load initial standard placements
             AdManager.loadAppOpenAd(this)
-            AdManager.loadInterstitialAd(this)
-            AdManager.loadDisconnectAd(this)
+            AdManager.loadConnectingInterstitial(this)
+            AdManager.loadDisconnectInterstitial(this)
         }
 
         setContent {
@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         // App Open Ad Placement (Triggered when tabbing back in, capped at 4h)
-        AdManager.showAppOpenAdIfAvailable(this, preferencesManager)
+        AdManager.showAppOpenAdIfAvailable(preferencesManager)
     }
 }
 
@@ -110,7 +110,7 @@ fun MainAppLayout(
     val lowDataMode by viewModel.lowDataMode.collectAsState()
     val showDoubleUpDialog by viewModel.showDoubleUpDialog.collectAsState()
 
-    val rewardedAdService = remember { RewardedAdService(context, viewModel) }
+    val rewardedAdService = remember { RewardedAdService(activity, viewModel) }
 
     var activeTab by remember { mutableStateOf(0) }
 
@@ -131,7 +131,7 @@ fun MainAppLayout(
     val onConnectTap = {
         if (connectionState == VpnState.DISCONNECTED) {
             // Placement 2: "Connecting..." Interstitial ad shown during background handshake
-            AdManager.showInterstitialAd(activity) {
+            AdManager.showConnectingInterstitial {
                 val vpnIntent = VpnService.prepare(context)
                 if (vpnIntent != null) {
                     vpnPrepareLauncher.launch(vpnIntent)
@@ -142,7 +142,7 @@ fun MainAppLayout(
             }
         } else {
             // Placement 5: Disconnect Exit Moment ad shown BEFORE finishing disconnect
-            AdManager.showDisconnectAd(activity) {
+            AdManager.showDisconnectInterstitial {
                 triggerVpnDisconnect(context)
                 viewModel.disconnectVpn()
             }
@@ -164,7 +164,7 @@ fun MainAppLayout(
                     Text(
                         text = "Unity Tunnel",
                         style = MaterialTheme.typography.displayMedium,
-                        color = Color(0xFFFF8A3D),
+                        color = Color(0xFFE1A730),
                         fontWeight = FontWeight.Bold
                     )
                     Text(
@@ -176,7 +176,7 @@ fun MainAppLayout(
                     Spacer(modifier = Modifier.height(32.dp))
                     
                     NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Support, contentDescription = "Support", tint = Color(0xFF2DD4BF)) },
+                        icon = { Icon(Icons.Default.Support, contentDescription = "Support", tint = Color(0xFFE1A730)) },
                         label = { Text("Account & Support", color = Color(0xFFF2F0EB)) },
                         selected = false,
                         onClick = {
@@ -187,7 +187,7 @@ fun MainAppLayout(
                     )
 
                     NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.HelpOutline, contentDescription = "FAQ", tint = Color(0xFF2DD4BF)) },
+                        icon = { Icon(Icons.Default.HelpOutline, contentDescription = "FAQ", tint = Color(0xFFE1A730)) },
                         label = { Text("How it Works", color = Color(0xFFF2F0EB)) },
                         selected = false,
                         onClick = {
@@ -224,7 +224,7 @@ fun MainAppLayout(
                     },
                     navigationIcon = {
                         IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color(0xFFFF8A3D))
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color(0xFFE1A730))
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -243,8 +243,8 @@ fun MainAppLayout(
                         selected = activeTab == 0,
                         onClick = { activeTab = 0 },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFFFF8A3D),
-                            selectedTextColor = Color(0xFFFF8A3D),
+                            selectedIconColor = Color(0xFFE1A730),
+                            selectedTextColor = Color(0xFFE1A730),
                             unselectedIconColor = Color(0xFF8B92A0),
                             unselectedTextColor = Color(0xFF8B92A0),
                             indicatorColor = Color(0xFF242933)
@@ -256,8 +256,8 @@ fun MainAppLayout(
                         selected = activeTab == 1,
                         onClick = { activeTab = 1 },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFFFF8A3D),
-                            selectedTextColor = Color(0xFFFF8A3D),
+                            selectedIconColor = Color(0xFFE1A730),
+                            selectedTextColor = Color(0xFFE1A730),
                             unselectedIconColor = Color(0xFF8B92A0),
                             unselectedTextColor = Color(0xFF8B92A0),
                             indicatorColor = Color(0xFF242933)
@@ -269,8 +269,8 @@ fun MainAppLayout(
                         selected = activeTab == 2,
                         onClick = { activeTab = 2 },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFFFF8A3D),
-                            selectedTextColor = Color(0xFFFF8A3D),
+                            selectedIconColor = Color(0xFFE1A730),
+                            selectedTextColor = Color(0xFFE1A730),
                             unselectedIconColor = Color(0xFF8B92A0),
                             unselectedTextColor = Color(0xFF8B92A0),
                             indicatorColor = Color(0xFF242933)
@@ -282,8 +282,8 @@ fun MainAppLayout(
                         selected = activeTab == 3,
                         onClick = { activeTab = 3 },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFFFF8A3D),
-                            selectedTextColor = Color(0xFFFF8A3D),
+                            selectedIconColor = Color(0xFFE1A730),
+                            selectedTextColor = Color(0xFFE1A730),
                             unselectedIconColor = Color(0xFF8B92A0),
                             unselectedTextColor = Color(0xFF8B92A0),
                             indicatorColor = Color(0xFF242933)
@@ -300,6 +300,7 @@ fun MainAppLayout(
                 // Main visual screens routing
                 when (activeTab) {
                     0 -> HomeScreen(
+                        activity = activity,
                         connectionState = connectionState,
                         balanceSeconds = balanceSeconds,
                         selectedServer = selectedServer,
@@ -329,7 +330,7 @@ fun MainAppLayout(
                         title = {
                             Text(
                                 "⚡ DOUBLE UP STREAK!",
-                                color = Color(0xFFFF8A3D),
+                                color = Color(0xFFE1A730),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 20.sp
                             )
@@ -345,12 +346,12 @@ fun MainAppLayout(
                                 onClick = {
                                     // Watch second ad
                                     rewardedAdService.loadAd(onLoaded = {
-                                        rewardedAdService.showAdForDoubleUp(activity, onClosed = {
+                                        rewardedAdService.showAdForDoubleUp(onClosed = {
                                             viewModel.dismissDoubleUpOffer()
                                         })
                                     })
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2DD4BF))
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE1A730))
                             ) {
                                 Text("Double Up! (+1 Hr)", color = Color(0xFF14171C), fontWeight = FontWeight.Bold)
                             }
@@ -373,13 +374,15 @@ fun MainAppLayout(
  */
 @Composable
 fun HomeScreen(
+    activity: Activity,
     connectionState: VpnState,
     balanceSeconds: Long,
     selectedServer: ServerEndpoint,
     onConnectTap: () -> Unit
 ) {
     val context = LocalContext.current
-    val circleColor = if (connectionState == VpnState.CONNECTED) Color(0xFF2DD4BF) else Color(0xFFFF8A3D)
+    val circleColor = if (connectionState == VpnState.CONNECTED) Color(0xFF2DD4BF) else Color(0xFFE1A730)
+    val isDevMode = !java.io.File(context.filesDir, "xray").exists()
     
     // Dynamic dial breathing animation
     val infiniteTransition = rememberInfiniteTransition(label = "breathing")
@@ -401,6 +404,24 @@ fun HomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
+        if (isDevMode) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFE53E3E), RoundedCornerShape(8.dp))
+                    .padding(8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "DEV MODE — NOT TUNNELING",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    letterSpacing = 1.sp
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
         // Dial Balance visualizer
         Box(
             contentAlignment = Alignment.Center,
@@ -496,7 +517,7 @@ fun HomeScreen(
                     text = "${selectedServer.pingMs} ms",
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    color = if (selectedServer.pingMs < 50) Color(0xFF2DD4BF) else Color(0xFFFF8A3D)
+                    color = if (selectedServer.pingMs < 50) Color(0xFFE1A730) else Color(0xFF8B92A0)
                 )
             }
         }
@@ -507,7 +528,7 @@ fun HomeScreen(
         Button(
             onClick = onConnectTap,
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (connectionState == VpnState.CONNECTED) Color(0xFF1C2027) else Color(0xFFFF8A3D)
+                containerColor = if (connectionState == VpnState.CONNECTED) Color(0xFF1C2027) else Color(0xFFE1A730)
             ),
             modifier = Modifier
                 .fillMaxWidth()
@@ -546,14 +567,16 @@ fun HomeScreen(
                 contentAlignment = Alignment.Center
             ) {
                 val isWifi = AdManager.isWifiConnected(context)
-                if (isWifi) {
+                val isAdManagerInitialized by AdManager.isInitialized.collectAsState()
+                if (isWifi && isAdManagerInitialized) {
                     // Cellular-aware wifi rich banner container
                     AndroidView(
                         factory = { ctx ->
-                            AdView(ctx).apply {
-                                setAdSize(AdSize.BANNER)
-                                adUnitId = AdManager.getBannerAdUnitId()
-                                loadAd(AdRequest.Builder().build())
+                            val sdk = com.applovin.sdk.AppLovinSdk.getInstance(activity)
+                            com.applovin.mediation.ads.MaxAdView(AdManager.MAX_BANNER_AD_UNIT_ID, sdk, activity).apply {
+                                setExtraParameter("allow_pause_auto_refresh_immediately", "true")
+                                startAutoRefresh()
+                                loadAd()
                             }
                         },
                         modifier = Modifier.fillMaxSize()
@@ -606,7 +629,7 @@ fun TopUpScreen(
                 Icons.Default.AddAlarm,
                 contentDescription = "Clock Topup",
                 modifier = Modifier.size(72.dp),
-                tint = Color(0xFFFF8A3D)
+                tint = Color(0xFFE1A730)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -641,7 +664,7 @@ fun TopUpScreen(
                 Text(
                     text = formatTime(balanceSeconds),
                     style = MaterialTheme.typography.displayLarge,
-                    color = Color(0xFF2DD4BF),
+                    color = Color(0xFFE1A730),
                     fontFamily = FontFamily.Monospace
                 )
             }
@@ -664,7 +687,7 @@ fun TopUpScreen(
                         modifier = Modifier
                             .size(14.dp)
                             .clip(CircleShape)
-                            .background(if (active) Color(0xFF2DD4BF) else Color(0xFF242933))
+                            .background(if (active) Color(0xFFE1A730) else Color(0xFF242933))
                             .border(1.dp, if (active) Color.Transparent else Color(0xFF8B92A0), CircleShape)
                     )
                 }
@@ -682,7 +705,7 @@ fun TopUpScreen(
                 }
                 // Preload ad
                 rewardedAdService.loadAd(onLoaded = {
-                    rewardedAdService.showAdForTopUp(activity, onClosed = {}, onFailure = {
+                    rewardedAdService.showAdForTopUp(onClosed = {}, onFailure = {
                         Toast.makeText(context, "Failed to present sponsored video. Try again shortly.", Toast.LENGTH_SHORT).show()
                     })
                 }, onFailure = { err ->
@@ -690,7 +713,7 @@ fun TopUpScreen(
                 })
             },
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (isCapped) Color(0xFF242933) else Color(0xFF2DD4BF)
+                containerColor = if (isCapped) Color(0xFF242933) else Color(0xFFE1A730)
             ),
             modifier = Modifier
                 .fillMaxWidth()
@@ -739,7 +762,7 @@ fun ServersScreen(
         ) {
             items(ServerEndpoint.DEFAULT_SERVERS) { server ->
                 val isSelected = server.id == selectedServer.id
-                val border = if (isSelected) BorderStroke(1.5.dp, Color(0xFF2DD4BF)) else BorderStroke(1.dp, Color(0xFF242933))
+                val border = if (isSelected) BorderStroke(1.5.dp, Color(0xFFE1A730)) else BorderStroke(1.dp, Color(0xFF242933))
                 val cardColor = if (isSelected) Color(0xFF242933) else Color(0xFF1C2027)
 
                 Card(
@@ -783,14 +806,14 @@ fun ServersScreen(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (server.pingMs < 50) Color(0xFF2DD4BF) else Color(0xFFFF8A3D)
+                                color = if (server.pingMs < 50) Color(0xFFE1A730) else Color(0xFF8B92A0)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             RadioButton(
                                 selected = isSelected,
                                 onClick = { onServerSelect(server) },
                                 colors = RadioButtonDefaults.colors(
-                                    selectedColor = Color(0xFF2DD4BF),
+                                    selectedColor = Color(0xFFE1A730),
                                     unselectedColor = Color(0xFF8B92A0)
                                 )
                             )
@@ -855,7 +878,7 @@ fun SettingsScreen(
                     onCheckedChange = { viewModel.setAutoProtocol(it) },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color(0xFF14171C),
-                        checkedTrackColor = Color(0xFF2DD4BF)
+                        checkedTrackColor = Color(0xFFE1A730)
                     )
                 )
             }
@@ -883,7 +906,7 @@ fun SettingsScreen(
                     onCheckedChange = { viewModel.setConnectOnLaunch(it) },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color(0xFF14171C),
-                        checkedTrackColor = Color(0xFF2DD4BF)
+                        checkedTrackColor = Color(0xFFE1A730)
                     )
                 )
             }
@@ -911,7 +934,7 @@ fun SettingsScreen(
                     onCheckedChange = { viewModel.setLowDataMode(it) },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color(0xFF14171C),
-                        checkedTrackColor = Color(0xFF2DD4BF)
+                        checkedTrackColor = Color(0xFFE1A730)
                     )
                 )
             }
@@ -929,7 +952,7 @@ fun SettingsScreen(
                 Text("Daily Ad Limit Check", color = Color(0xFFF2F0EB), fontWeight = FontWeight.Bold)
                 Text(
                     text = "$adsToday / 5 Ads Watched",
-                    color = Color(0xFFFF8A3D),
+                    color = Color(0xFFE1A730),
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace
                 )
@@ -949,14 +972,14 @@ fun SettingsScreen(
             ) {
                 Text(
                     text = "Privacy Policy",
-                    color = Color(0xFF2DD4BF),
+                    color = Color(0xFFE1A730),
                     fontSize = 13.sp,
                     modifier = Modifier.clickable { /* Link to Privacy */ }
                 )
                 Text("|", color = Color(0xFF8B92A0), fontSize = 13.sp)
                 Text(
                     text = "Terms of Service",
-                    color = Color(0xFF2DD4BF),
+                    color = Color(0xFFE1A730),
                     fontSize = 13.sp,
                     modifier = Modifier.clickable { /* Link to Terms */ }
                 )

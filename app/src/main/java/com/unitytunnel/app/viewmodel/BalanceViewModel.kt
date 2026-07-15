@@ -145,9 +145,9 @@ class BalanceViewModel(
                     if (newBalance == 0L) {
                         // Section 2 hard rule: Reset balance back to 15 mins (900 seconds) and auto disconnect
                         Log.d(TAG, "Balance hit zero. Resetting to 15 mins and disconnecting VPN.")
-                        disconnectVpn()
                         _balanceSeconds.value = 900L
                         preferencesManager.saveBalanceSeconds(900L)
+                        disconnectVpn()
                         break
                     }
                 }

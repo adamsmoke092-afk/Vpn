@@ -1,4 +1,8 @@
-package com.unitytunnel.app.ads
+import os
+
+path = "app/src/main/java/com/unitytunnel/app/ads/AdManager.kt"
+
+content = """package com.unitytunnel.app.ads
 
 import android.app.Activity
 import android.content.Context
@@ -74,24 +78,24 @@ object AdManager {
                     Log.e(TAG, "Connecting Ad Failed: ${error.message}")
                     connectingAdRetryAttempt++
                     val delayMillis = TimeUnit.SECONDS.toMillis(Math.pow(2.0, Math.min(6.0, connectingAdRetryAttempt)).toLong())
-                    Handler(Looper.getMainLooper()).postDelayed({ if (!MAX_CONNECTING_INTERSTITIAL_AD_UNIT_ID.startsWith("YOUR_")) { connectingInterstitialAd?.loadAd() } }, delayMillis)
+                    Handler(Looper.getMainLooper()).postDelayed({ connectingInterstitialAd?.loadAd() }, delayMillis)
                 }
                 override fun onAdDisplayFailed(ad: MaxAd, error: MaxError) {
                     Log.e(TAG, "Connecting Ad Display Failed: ${error.message}")
-                    if (!MAX_CONNECTING_INTERSTITIAL_AD_UNIT_ID.startsWith("YOUR_")) { connectingInterstitialAd?.loadAd() }
+                    connectingInterstitialAd?.loadAd()
                     onConnectingAdClosed?.invoke()
                     onConnectingAdClosed = null
                 }
                 override fun onAdDisplayed(ad: MaxAd) {}
                 override fun onAdClicked(ad: MaxAd) {}
                 override fun onAdHidden(ad: MaxAd) {
-                    if (!MAX_CONNECTING_INTERSTITIAL_AD_UNIT_ID.startsWith("YOUR_")) { connectingInterstitialAd?.loadAd() }
+                    connectingInterstitialAd?.loadAd()
                     onConnectingAdClosed?.invoke()
                     onConnectingAdClosed = null
                 }
             })
         }
-        if (!MAX_CONNECTING_INTERSTITIAL_AD_UNIT_ID.startsWith("YOUR_")) { connectingInterstitialAd?.loadAd() }
+        connectingInterstitialAd?.loadAd()
     }
 
     fun showConnectingInterstitial(onClosed: () -> Unit) {
@@ -114,23 +118,23 @@ object AdManager {
                 override fun onAdLoadFailed(adUnitId: String, error: MaxError) {
                     disconnectAdRetryAttempt++
                     val delayMillis = TimeUnit.SECONDS.toMillis(Math.pow(2.0, Math.min(6.0, disconnectAdRetryAttempt)).toLong())
-                    Handler(Looper.getMainLooper()).postDelayed({ if (!MAX_DISCONNECT_INTERSTITIAL_AD_UNIT_ID.startsWith("YOUR_")) { disconnectInterstitialAd?.loadAd() } }, delayMillis)
+                    Handler(Looper.getMainLooper()).postDelayed({ disconnectInterstitialAd?.loadAd() }, delayMillis)
                 }
                 override fun onAdDisplayFailed(ad: MaxAd, error: MaxError) {
-                    if (!MAX_DISCONNECT_INTERSTITIAL_AD_UNIT_ID.startsWith("YOUR_")) { disconnectInterstitialAd?.loadAd() }
+                    disconnectInterstitialAd?.loadAd()
                     onDisconnectAdClosed?.invoke()
                     onDisconnectAdClosed = null
                 }
                 override fun onAdDisplayed(ad: MaxAd) {}
                 override fun onAdClicked(ad: MaxAd) {}
                 override fun onAdHidden(ad: MaxAd) {
-                    if (!MAX_DISCONNECT_INTERSTITIAL_AD_UNIT_ID.startsWith("YOUR_")) { disconnectInterstitialAd?.loadAd() }
+                    disconnectInterstitialAd?.loadAd()
                     onDisconnectAdClosed?.invoke()
                     onDisconnectAdClosed = null
                 }
             })
         }
-        if (!MAX_DISCONNECT_INTERSTITIAL_AD_UNIT_ID.startsWith("YOUR_")) { disconnectInterstitialAd?.loadAd() }
+        disconnectInterstitialAd?.loadAd()
     }
 
     fun showDisconnectInterstitial(onClosed: () -> Unit) {
@@ -153,17 +157,17 @@ object AdManager {
                 override fun onAdLoadFailed(adUnitId: String, error: MaxError) {
                     appOpenAdRetryAttempt++
                     val delayMillis = TimeUnit.SECONDS.toMillis(Math.pow(2.0, Math.min(6.0, appOpenAdRetryAttempt)).toLong())
-                    Handler(Looper.getMainLooper()).postDelayed({ if (!MAX_APP_OPEN_AD_UNIT_ID.startsWith("YOUR_")) { appOpenAd?.loadAd() } }, delayMillis)
+                    Handler(Looper.getMainLooper()).postDelayed({ appOpenAd?.loadAd() }, delayMillis)
                 }
                 override fun onAdDisplayFailed(ad: MaxAd, error: MaxError) {
-                    if (!MAX_APP_OPEN_AD_UNIT_ID.startsWith("YOUR_")) { appOpenAd?.loadAd() }
+                    appOpenAd?.loadAd()
                     onAppOpenAdClosed?.invoke()
                     onAppOpenAdClosed = null
                 }
                 override fun onAdDisplayed(ad: MaxAd) {}
                 override fun onAdClicked(ad: MaxAd) {}
                 override fun onAdHidden(ad: MaxAd) {
-                    if (!MAX_APP_OPEN_AD_UNIT_ID.startsWith("YOUR_")) { appOpenAd?.loadAd() }
+                    appOpenAd?.loadAd()
                     cachedPreferencesManager?.let { pm ->
                         CoroutineScope(Dispatchers.IO).launch {
                             pm.saveLastOpenAdTime(System.currentTimeMillis())
@@ -174,7 +178,7 @@ object AdManager {
                 }
             })
         }
-        if (!MAX_APP_OPEN_AD_UNIT_ID.startsWith("YOUR_")) { appOpenAd?.loadAd() }
+        appOpenAd?.loadAd()
     }
 
     fun showAppOpenAdIfAvailable(preferencesManager: PreferencesManager, onClosed: () -> Unit = {}) {
@@ -204,3 +208,7 @@ object AdManager {
         return actNw.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
     }
 }
+"""
+
+with open(path, "w") as f:
+    f.write(content)

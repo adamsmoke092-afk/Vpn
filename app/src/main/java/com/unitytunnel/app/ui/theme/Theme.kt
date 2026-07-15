@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-  primary = AmberColor,
+  primary = GoldColor,
   onPrimary = BgColor,
   secondary = TealColor,
   onSecondary = BgColor,
@@ -34,5 +34,9 @@ fun MyApplicationTheme(
 ) {
   val colorScheme = DarkColorScheme
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  MaterialTheme(
+    colorScheme = colorScheme,
+    typography = Typography,
+    content = content
+  )
 }

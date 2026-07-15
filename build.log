@@ -1,0 +1,24 @@
+Starting a Gradle Daemon, 2 busy Daemons could not be reused, use --status for details
+Reusing configuration cache.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:processDebugGoogleServices UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin
+w: file:///app/applet/app/src/main/java/com/unitytunnel/app/MainActivity.kt:190:53 'val Icons.Filled.HelpOutline: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.HelpOutline.
+w: file:///app/applet/app/src/main/java/com/unitytunnel/app/MainActivity.kt:886:13 'fun Divider(modifier: Modifier = ..., thickness: Dp = ..., color: Color = ...): Unit' is deprecated. Renamed to HorizontalDivider.
+w: file:///app/applet/app/src/main/java/com/unitytunnel/app/MainActivity.kt:914:13 'fun Divider(modifier: Modifier = ..., thickness: Dp = ..., color: Color = ...): Unit' is deprecated. Renamed to HorizontalDivider.
+w: file:///app/applet/app/src/main/java/com/unitytunnel/app/MainActivity.kt:942:13 'fun Divider(modifier: Modifier = ..., thickness: Dp = ..., color: Color = ...): Unit' is deprecated. Renamed to HorizontalDivider.
+w: file:///app/applet/app/src/main/java/com/unitytunnel/app/ads/AdManager.kt:56:42 'var mediationProvider: String!' is deprecated. Deprecated in Java.
+w: file:///app/applet/app/src/main/java/com/unitytunnel/app/ads/AdManager.kt:57:21 'static fun initializeSdk(p0: Context!, p1: AppLovinSdk.SdkInitializationListener!): Unit' is deprecated. Deprecated in Java.
+w: file:///app/applet/app/src/main/java/com/unitytunnel/app/vpn/UnityTunnelVpnService.kt:218:9 'fun stopForeground(p0: Boolean): Unit' is deprecated. Deprecated in Java.
+
+BUILD SUCCESSFUL in 1m 55s
+9 actionable tasks: 1 executed, 8 up-to-date
+Configuration cache entry reused.

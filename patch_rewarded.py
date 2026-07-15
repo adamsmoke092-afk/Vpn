@@ -1,4 +1,8 @@
-package com.unitytunnel.app.ads
+import os
+
+path = "app/src/main/java/com/unitytunnel/app/ads/RewardedAdService.kt"
+
+content = """package com.unitytunnel.app.ads
 
 import android.app.Activity
 import android.os.Handler
@@ -44,14 +48,14 @@ class RewardedAdService(
                 Log.e(TAG, "Rewarded ad failed to load: ${error.message}")
                 retryAttempt++
                 val delayMillis = TimeUnit.SECONDS.toMillis(Math.pow(2.0, Math.min(6.0, retryAttempt)).toLong())
-                Handler(Looper.getMainLooper()).postDelayed({ if (!AdManager.MAX_REWARDED_AD_UNIT_ID.startsWith("YOUR_")) { rewardedAd?.loadAd() } }, delayMillis)
+                Handler(Looper.getMainLooper()).postDelayed({ rewardedAd?.loadAd() }, delayMillis)
                 
                 onAdLoadFailedCallback?.invoke(error.message)
                 onAdLoadFailedCallback = null
             }
 
             override fun onAdDisplayFailed(ad: MaxAd, error: MaxError) {
-                if (!AdManager.MAX_REWARDED_AD_UNIT_ID.startsWith("YOUR_")) { rewardedAd?.loadAd() }
+                rewardedAd?.loadAd()
                 onAdDisplayFailedCallback?.invoke()
                 onAdClosedCallback?.invoke()
                 clearCallbacks()
@@ -61,7 +65,7 @@ class RewardedAdService(
             override fun onAdClicked(ad: MaxAd) {}
             
             override fun onAdHidden(ad: MaxAd) {
-                if (!AdManager.MAX_REWARDED_AD_UNIT_ID.startsWith("YOUR_")) { rewardedAd?.loadAd() }
+                rewardedAd?.loadAd()
                 onAdClosedCallback?.invoke()
                 clearCallbacks()
             }
@@ -95,7 +99,7 @@ class RewardedAdService(
         } else {
             onAdLoadedCallback = onLoaded
             onAdLoadFailedCallback = onFailure
-            if (!AdManager.MAX_REWARDED_AD_UNIT_ID.startsWith("YOUR_")) { rewardedAd?.loadAd() }
+            rewardedAd?.loadAd()
         }
     }
 
@@ -123,3 +127,7 @@ class RewardedAdService(
         }
     }
 }
+"""
+
+with open(path, "w") as f:
+    f.write(content)
