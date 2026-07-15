@@ -1,5 +1,8 @@
 package com.unitytunnel.app
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -113,6 +116,92 @@ fun MainAppLayout(
     val rewardedAdService = remember { RewardedAdService(activity, viewModel) }
 
     var activeTab by remember { mutableStateOf(0) }
+
+    // Onboarding & Notification Permission Handling
+    val onboardingCompleted by viewModel.onboardingCompleted.collectAsState()
+    var hasDismissedOnboarding by remember { mutableStateOf(false) }
+    
+    val showOnboarding = !onboardingCompleted && 
+                         !hasDismissedOnboarding &&
+                         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            viewModel.setOnboardingCompleted(true)
+            hasDismissedOnboarding = true
+            if (isGranted) {
+                Toast.makeText(context, "Status notification enabled.", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "VPN status will run quietly in background.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    )
+
+    if (showOnboarding) {
+        AlertDialog(
+            onDismissRequest = {
+                viewModel.setOnboardingCompleted(true)
+                hasDismissedOnboarding = true
+            },
+            containerColor = Color(0xFF1C2027),
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = "Notifications",
+                    tint = Color(0xFFE1A730),
+                    modifier = Modifier.size(40.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "STAY SECURE",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFF2F0EB),
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Text(
+                    text = "Unity Tunnel uses a background status notification to monitor your secure VPN session, active server, and remaining time balance. This also prevents Android from aggressively stopping your VPN connection in the background.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF8B92A0),
+                    textAlign = TextAlign.Center
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            viewModel.setOnboardingCompleted(true)
+                            hasDismissedOnboarding = true
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFE1A730),
+                        contentColor = Color(0xFF14171C)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("ENABLE NOTIFICATIONS", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.setOnboardingCompleted(true)
+                        hasDismissedOnboarding = true
+                    }
+                ) {
+                    Text("SKIP", color = Color(0xFF8B92A0), fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 
     // VPN Request Launcher
     val vpnPrepareLauncher = rememberLauncherForActivityResult(
@@ -319,7 +408,12 @@ fun MainAppLayout(
                     )
                     3 -> SettingsScreen(
                         viewModel = viewModel,
-                        adsToday = adsToday
+                        adsToday = adsToday,
+                        onRequestNotificationPermission = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
                     )
                 }
 
@@ -831,7 +925,8 @@ fun ServersScreen(
 @Composable
 fun SettingsScreen(
     viewModel: BalanceViewModel,
-    adsToday: Int
+    adsToday: Int,
+    onRequestNotificationPermission: () -> Unit
 ) {
     val autoProtocol by viewModel.autoProtocol.collectAsState()
     val connectOnLaunch by viewModel.connectOnLaunch.collectAsState()
@@ -941,7 +1036,29 @@ fun SettingsScreen(
 
             Divider(color = Color(0xFF242933), modifier = Modifier.padding(vertical = 8.dp))
 
-            // Setting 4: Info Display
+            // Setting 4: Notification Permission
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onRequestNotificationPermission() }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Notification Permission", color = Color(0xFFF2F0EB), fontWeight = FontWeight.Bold)
+                    Text(
+                        "Enable background status monitoring.",
+                        color = Color(0xFF8B92A0),
+                        fontSize = 11.sp
+                    )
+                }
+                Icon(Icons.Default.Notifications, contentDescription = null, tint = Color(0xFFE1A730))
+            }
+
+            Divider(color = Color(0xFF242933), modifier = Modifier.padding(vertical = 8.dp))
+
+            // Setting 5: Info Display
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

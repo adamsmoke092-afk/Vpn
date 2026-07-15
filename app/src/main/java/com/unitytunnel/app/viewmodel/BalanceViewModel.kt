@@ -54,6 +54,9 @@ class BalanceViewModel(
     private val _lowDataMode = MutableStateFlow(false)
     val lowDataMode: StateFlow<Boolean> = _lowDataMode.asStateFlow()
 
+    private val _onboardingCompleted = MutableStateFlow(false)
+    val onboardingCompleted: StateFlow<Boolean> = _onboardingCompleted.asStateFlow()
+
     // Double Up Banner/Offer state
     private val _showDoubleUpDialog = MutableStateFlow(false)
     val showDoubleUpDialog: StateFlow<Boolean> = _showDoubleUpDialog.asStateFlow()
@@ -81,6 +84,7 @@ class BalanceViewModel(
             _autoProtocol.value = preferencesManager.autoProtocol.first()
             _connectOnLaunch.value = preferencesManager.connectOnLaunch.first()
             _lowDataMode.value = preferencesManager.lowDataMode.first()
+            _onboardingCompleted.value = preferencesManager.onboardingCompleted.first()
 
             // Auto-connect on launch if enabled and balance > 0
             if (_connectOnLaunch.value && _balanceSeconds.value > 0) {
@@ -240,6 +244,13 @@ class BalanceViewModel(
         viewModelScope.launch {
             _lowDataMode.value = enabled
             preferencesManager.setLowDataMode(enabled)
+        }
+    }
+
+    fun setOnboardingCompleted(completed: Boolean) {
+        viewModelScope.launch {
+            _onboardingCompleted.value = completed
+            preferencesManager.setOnboardingCompleted(completed)
         }
     }
 

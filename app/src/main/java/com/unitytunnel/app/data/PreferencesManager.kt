@@ -30,6 +30,7 @@ class PreferencesManager(private val context: Context) {
         val KEY_AUTO_PROTOCOL = booleanPreferencesKey("auto_protocol")
         val KEY_CONNECT_ON_LAUNCH = booleanPreferencesKey("connect_on_launch")
         val KEY_LOW_DATA_MODE = booleanPreferencesKey("low_data_mode")
+        val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
     val balanceSeconds: Flow<Long> = context.dataStore.data
@@ -90,6 +91,13 @@ class PreferencesManager(private val context: Context) {
             prefs[KEY_LOW_DATA_MODE] ?: false
         }
 
+    val onboardingCompleted: Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }.map { prefs ->
+            prefs[KEY_ONBOARDING_COMPLETED] ?: false
+        }
+
     suspend fun saveBalanceSeconds(seconds: Long) {
         context.dataStore.edit { prefs ->
             prefs[KEY_BALANCE_SECONDS] = seconds
@@ -135,6 +143,12 @@ class PreferencesManager(private val context: Context) {
     suspend fun setLowDataMode(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_LOW_DATA_MODE] = enabled
+        }
+    }
+
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ONBOARDING_COMPLETED] = completed
         }
     }
 }
