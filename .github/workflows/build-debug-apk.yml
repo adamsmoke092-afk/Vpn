@@ -28,7 +28,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Regenerate Wrapper
-        run: gradle wrapper --gradle-version 9.3.1
+        run: gradle wrapper
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
