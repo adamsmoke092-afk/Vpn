@@ -15,12 +15,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import android.app.Activity
-import com.google.android.gms.ads.AdError
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.FullScreenContentCallback
-import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.rewarded.RewardedAd
-import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -62,6 +56,9 @@ class BalanceViewModel(
     private val _lowDataMode = MutableStateFlow(false)
     val lowDataMode: StateFlow<Boolean> = _lowDataMode.asStateFlow()
 
+    private val _darkMode = MutableStateFlow(true)
+    val darkMode: StateFlow<Boolean> = _darkMode.asStateFlow()
+
     private val _onboardingCompleted = MutableStateFlow(false)
     val onboardingCompleted: StateFlow<Boolean> = _onboardingCompleted.asStateFlow()
 
@@ -73,9 +70,7 @@ class BalanceViewModel(
     private var countdownJob: Job? = null
     private var connectionStartTime: Long = 0L
 
-    private var rewardedAd: RewardedAd? = null
     private val adUnitId = "ca-app-pub-3940256099942544/5224354917" // Test ad unit ID
-    private var adLoadRetryAttempt = 0
 
 
     init {
@@ -98,10 +93,10 @@ class BalanceViewModel(
             _autoProtocol.value = preferencesManager.autoProtocol.first()
             _connectOnLaunch.value = preferencesManager.connectOnLaunch.first()
             _lowDataMode.value = preferencesManager.lowDataMode.first()
+            _darkMode.value = preferencesManager.darkMode.first()
             _onboardingCompleted.value = preferencesManager.onboardingCompleted.first()
 
         }
-        preloadRewardedAd()
     }
 
 
@@ -177,60 +172,20 @@ class BalanceViewModel(
     }
 
 
-    private fun preloadRewardedAd() {
-        val request = AdRequest.Builder().build()
-        RewardedAd.load(getApplication(), adUnitId, request, object : RewardedAdLoadCallback() {
-            override fun onAdLoaded(ad: RewardedAd) {
-                rewardedAd = ad
-                adLoadRetryAttempt = 0
-                Log.d(TAG, "Rewarded ad loaded successfully.")
-            }
-            override fun onAdFailedToLoad(error: LoadAdError) {
-                rewardedAd = null
-                Log.e(TAG, "Rewarded ad failed to load: ${error.message}")
-                
-                // Retry with backoff — 30s, then 60s, then 2min, capped.
-                adLoadRetryAttempt++
-                val retryDelayMillis = Math.min(Math.pow(2.0, adLoadRetryAttempt.toDouble()).toLong() * 30000, 120000)
-                
-                viewModelScope.launch {
-                    delay(retryDelayMillis)
-                    preloadRewardedAd()
-                }
-            }
-        })
-    }
-
-    fun showRewardedAd(activity: Activity, rewardType: String = "TOP_UP", onResult: (success: Boolean) -> Unit) {
-        val ad = rewardedAd
-        if (ad == null) {
-            onResult(false) // UI should show "ad not ready, try again shortly" — never a raw crash/blank state
-            preloadRewardedAd()
+    fun showRewardedAd(activity: Activity, rewardType: String = "TOP_UP", onResult: (success: Boolean, msg: String?) -> Unit) {
+        if (_adsToday.value >= 12) {
+            onResult(false, "Daily limit reached. Come back tomorrow.")
             return
         }
-
-        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-            override fun onAdDismissedFullScreenContent() {
-                rewardedAd = null
-                preloadRewardedAd() // immediately start loading the NEXT ad
+        com.unitytunnel.app.ads.RewardedAdService.showRewardedAd(
+            onSuccess = {
+                onResult(true, null)
+                notifyServerAdWatched(rewardType) // triggers SSV round-trip; server is source of truth for balance
+            },
+            onFail = {
+                onResult(false, "Sponsored video not ready. Try again shortly.") // UI should show "ad not ready, try again shortly"
             }
-            override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                rewardedAd = null
-                Log.e(TAG, "Rewarded ad failed to show: ${adError.message}")
-                preloadRewardedAd()
-                onResult(false)
-            }
-        }
-
-        ad.show(activity) { rewardItem ->
-            // DO NOT grant the hour here directly. Client-side callback is for immediate
-            // UI feedback only. The actual balance increment must come from the server
-            // after SSV confirms the reward — see SSV integration doc for the correct
-            // ECDSA verification flow (not the HMAC version from the earlier draft, which
-            // does not match real AdMob SSV and was flagged as incorrect).
-            onResult(true)
-            notifyServerAdWatched(rewardType) // triggers SSV round-trip; server is source of truth for balance
-        }
+        )
     }
 
     private fun notifyServerAdWatched(rewardType: String) {
@@ -244,20 +199,20 @@ class BalanceViewModel(
     }
 
     /**
-     * Watching a rewarded video ad grants +2 hours (7200 seconds) additively
+     * Watching a rewarded video ad grants +1 hour (3600 seconds) additively
 
      */
     fun grantRewardedTime() {
         viewModelScope.launch {
             checkDailyAdReset()
             val currentAds = _adsToday.value
-            if (currentAds >= 5) {
-                Log.e(TAG, "Cannot grant reward: ad cap of 5/day exceeded")
+            if (currentAds >= 12) {
+                Log.e(TAG, "Cannot grant reward: ad cap of 12/day exceeded")
                 return@launch
             }
 
-            // Add +2 hours
-            val newBalance = _balanceSeconds.value + 7200L
+            // Add +1 hour
+            val newBalance = _balanceSeconds.value + 3600L
             _balanceSeconds.value = newBalance
             preferencesManager.saveBalanceSeconds(newBalance)
 
@@ -266,7 +221,7 @@ class BalanceViewModel(
             _adsToday.value = newAdsCount
             preferencesManager.saveAdsToday(newAdsCount)
 
-            Log.d(TAG, "Earned reward: +2 Hours added. Total: $newBalance s, Ads Today: $newAdsCount")
+            Log.d(TAG, "Earned reward: +1 Hour added. Total: $newBalance s, Ads Today: $newAdsCount")
 
             // Show double-up bonus offer if this was the first ad of the day
             if (newAdsCount == 1) {
@@ -324,6 +279,13 @@ class BalanceViewModel(
         viewModelScope.launch {
             _lowDataMode.value = enabled
             preferencesManager.setLowDataMode(enabled)
+        }
+    }
+
+    fun setDarkMode(enabled: Boolean) {
+        viewModelScope.launch {
+            _darkMode.value = enabled
+            preferencesManager.setDarkMode(enabled)
         }
     }
 

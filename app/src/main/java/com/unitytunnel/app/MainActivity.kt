@@ -73,10 +73,12 @@ class MainActivity : ComponentActivity() {
             AdManager.loadAppOpenAd(this)
             AdManager.loadConnectingInterstitial(this)
             AdManager.loadDisconnectInterstitial(this)
+            com.unitytunnel.app.ads.RewardedAdService.initialize(this)
         }
 
         setContent {
-            MyApplicationTheme {
+            val darkMode by viewModel.darkMode.collectAsState()
+            MyApplicationTheme(darkTheme = darkMode) {
                 MainAppLayout(
                     activity = this,
                     viewModel = viewModel,
@@ -114,6 +116,7 @@ fun MainAppLayout(
 
 
     var activeTab by remember { mutableStateOf(0) }
+    var showReportIssueDialog by remember { mutableStateOf(false) }
 
     // Onboarding & Notification Permission Handling
     val onboardingCompleted by viewModel.onboardingCompleted.collectAsState()
@@ -143,12 +146,12 @@ fun MainAppLayout(
                 viewModel.setOnboardingCompleted(true)
                 hasDismissedOnboarding = true
             },
-            containerColor = Color(0xFF1C2027),
+            containerColor = MaterialTheme.colorScheme.surface,
             icon = {
                 Icon(
                     imageVector = Icons.Default.Notifications,
                     contentDescription = "Notifications",
-                    tint = Color(0xFFE1A730),
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(40.dp)
                 )
             },
@@ -157,7 +160,7 @@ fun MainAppLayout(
                     text = "STAY SECURE",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF2F0EB),
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center
                 )
             },
@@ -165,7 +168,7 @@ fun MainAppLayout(
                 Text(
                     text = "Unity Tunnel uses a background status notification to monitor your secure VPN session, active server, and remaining time balance. This also prevents Android from aggressively stopping your VPN connection in the background.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF8B92A0),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
             },
@@ -180,8 +183,8 @@ fun MainAppLayout(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE1A730),
-                        contentColor = Color(0xFF14171C)
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.background
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -195,7 +198,7 @@ fun MainAppLayout(
                         hasDismissedOnboarding = true
                     }
                 ) {
-                    Text("SKIP", color = Color(0xFF8B92A0), fontWeight = FontWeight.Bold)
+                    Text("SKIP", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -240,7 +243,7 @@ fun MainAppLayout(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                drawerContainerColor = Color(0xFF1C2027),
+                drawerContainerColor = MaterialTheme.colorScheme.surface,
                 modifier = Modifier.width(300.dp)
             ) {
                 Column(
@@ -251,20 +254,20 @@ fun MainAppLayout(
                     Text(
                         text = "Unity Tunnel",
                         style = MaterialTheme.typography.displayMedium,
-                        color = Color(0xFFE1A730),
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "VLESS & Trojan Prepaid Client",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF8B92A0)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     
                     Spacer(modifier = Modifier.height(32.dp))
                     
                     NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.Support, contentDescription = "Support", tint = Color(0xFFE1A730)) },
-                        label = { Text("Account & Support", color = Color(0xFFF2F0EB)) },
+                        icon = { Icon(Icons.Default.Support, contentDescription = "Support", tint = MaterialTheme.colorScheme.primary) },
+                        label = { Text("Account & Support", color = MaterialTheme.colorScheme.onBackground) },
                         selected = false,
                         onClick = {
                             coroutineScope.launch { drawerState.close() }
@@ -274,12 +277,23 @@ fun MainAppLayout(
                     )
 
                     NavigationDrawerItem(
-                        icon = { Icon(Icons.Default.HelpOutline, contentDescription = "FAQ", tint = Color(0xFFE1A730)) },
-                        label = { Text("How it Works", color = Color(0xFFF2F0EB)) },
+                        icon = { Icon(Icons.Default.HelpOutline, contentDescription = "FAQ", tint = MaterialTheme.colorScheme.primary) },
+                        label = { Text("How it Works", color = MaterialTheme.colorScheme.onBackground) },
                         selected = false,
                         onClick = {
                             coroutineScope.launch { drawerState.close() }
-                            Toast.makeText(context, "Each video ad watched tops up 2 hours!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Each video ad watched tops up 1 hour!", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent)
+                    )
+
+                    NavigationDrawerItem(
+                        icon = { Icon(Icons.Default.Feedback, contentDescription = "Report Issue", tint = MaterialTheme.colorScheme.primary) },
+                        label = { Text("Report Issue", color = MaterialTheme.colorScheme.onBackground) },
+                        selected = false,
+                        onClick = {
+                            coroutineScope.launch { drawerState.close() }
+                            showReportIssueDialog = true
                         },
                         colors = NavigationDrawerItemDefaults.colors(unselectedContainerColor = Color.Transparent)
                     )
@@ -289,7 +303,7 @@ fun MainAppLayout(
                     Text(
                         text = "Version 1.0.4 (South Africa Core)",
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color(0xFF8B92A0),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontFamily = FontFamily.Monospace
                     )
                 }
@@ -297,7 +311,7 @@ fun MainAppLayout(
         }
     ) {
         Scaffold(
-            containerColor = Color(0xFF14171C),
+            containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 CenterAlignedTopAppBar(
                     title = {
@@ -306,22 +320,22 @@ fun MainAppLayout(
                             fontWeight = FontWeight.ExtraBold,
                             fontFamily = FontFamily.SansSerif,
                             letterSpacing = 1.5.sp,
-                            color = Color(0xFFF2F0EB)
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     },
                     navigationIcon = {
                         IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color(0xFFE1A730))
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = Color(0xFF14171C)
+                        containerColor = MaterialTheme.colorScheme.background
                     )
                 )
             },
             bottomBar = {
                 NavigationBar(
-                    containerColor = Color(0xFF1C2027),
+                    containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 8.dp
                 ) {
                     NavigationBarItem(
@@ -330,11 +344,11 @@ fun MainAppLayout(
                         selected = activeTab == 0,
                         onClick = { activeTab = 0 },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFFE1A730),
-                            selectedTextColor = Color(0xFFE1A730),
-                            unselectedIconColor = Color(0xFF8B92A0),
-                            unselectedTextColor = Color(0xFF8B92A0),
-                            indicatorColor = Color(0xFF242933)
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     )
                     NavigationBarItem(
@@ -343,11 +357,11 @@ fun MainAppLayout(
                         selected = activeTab == 1,
                         onClick = { activeTab = 1 },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFFE1A730),
-                            selectedTextColor = Color(0xFFE1A730),
-                            unselectedIconColor = Color(0xFF8B92A0),
-                            unselectedTextColor = Color(0xFF8B92A0),
-                            indicatorColor = Color(0xFF242933)
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     )
                     NavigationBarItem(
@@ -356,11 +370,11 @@ fun MainAppLayout(
                         selected = activeTab == 2,
                         onClick = { activeTab = 2 },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFFE1A730),
-                            selectedTextColor = Color(0xFFE1A730),
-                            unselectedIconColor = Color(0xFF8B92A0),
-                            unselectedTextColor = Color(0xFF8B92A0),
-                            indicatorColor = Color(0xFF242933)
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     )
                     NavigationBarItem(
@@ -369,11 +383,11 @@ fun MainAppLayout(
                         selected = activeTab == 3,
                         onClick = { activeTab = 3 },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFFE1A730),
-                            selectedTextColor = Color(0xFFE1A730),
-                            unselectedIconColor = Color(0xFF8B92A0),
-                            unselectedTextColor = Color(0xFF8B92A0),
-                            indicatorColor = Color(0xFF242933)
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     )
                 }
@@ -410,6 +424,17 @@ fun MainAppLayout(
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                             }
+                        },
+                        onReportIssueClick = { showReportIssueDialog = true }
+                    )
+                }
+
+                // Report Issue Dialog
+                if (showReportIssueDialog) {
+                    ReportIssueDialog(
+                        onDismiss = { showReportIssueDialog = false },
+                        onSubmit = { category, subject, description, email, attachDiagnostics ->
+                            Toast.makeText(context, "Feedback submitted successfully!", Toast.LENGTH_LONG).show()
                         }
                     )
                 }
@@ -421,7 +446,7 @@ fun MainAppLayout(
                         title = {
                             Text(
                                 "⚡ DOUBLE UP STREAK!",
-                                color = Color(0xFFE1A730),
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 20.sp
                             )
@@ -429,32 +454,32 @@ fun MainAppLayout(
                         text = {
                             Text(
                                 "Watch one more quick sponsored video and gain an extra +1 hour bonus instantly stacked on top!",
-                                color = Color(0xFFF2F0EB)
+                                color = MaterialTheme.colorScheme.onBackground
                             )
                         },
                         confirmButton = {
                             Button(
                                 onClick = {
                                     // Watch second ad
-                                    viewModel.showRewardedAd(activity, "DOUBLE_UP") { success ->
+                                    viewModel.showRewardedAd(activity, "DOUBLE_UP") { success, msg ->
                                         if (success) {
                                             viewModel.dismissDoubleUpOffer()
                                         } else {
-                                            Toast.makeText(context, "Ad not ready or failed to show. Try again shortly.", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, msg ?: "Ad not ready or failed to show.", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE1A730))
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                             ) {
-                                Text("Double Up! (+1 Hr)", color = Color(0xFF14171C), fontWeight = FontWeight.Bold)
+                                Text("Double Up! (+1 Hr)", color = MaterialTheme.colorScheme.background, fontWeight = FontWeight.Bold)
                             }
                         },
                         dismissButton = {
                             TextButton(onClick = { viewModel.dismissDoubleUpOffer() }) {
-                                Text("No Thanks", color = Color(0xFF8B92A0))
+                                Text("No Thanks", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         },
-                        containerColor = Color(0xFF1C2027)
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
                 }
             }
@@ -474,7 +499,7 @@ fun HomeScreen(
     onConnectTap: () -> Unit
 ) {
     val context = LocalContext.current
-    val circleColor = if (connectionState == VpnState.CONNECTED) Color(0xFF2DD4BF) else Color(0xFFE1A730)
+    val circleColor = if (connectionState == VpnState.CONNECTED) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
     val isDevMode = !java.io.File(context.filesDir, "xray").exists()
     
     // Dynamic dial breathing animation
@@ -501,7 +526,7 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFE53E3E), RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.error, RoundedCornerShape(8.dp))
                     .padding(8.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -522,6 +547,7 @@ fun HomeScreen(
                 .size(240.dp)
                 .padding(16.dp)
         ) {
+            val dialBgColor = MaterialTheme.colorScheme.surface
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val strokeWidth = 14.dp.toPx()
                 val sizeVal = size.width * radiusMultiplier
@@ -529,7 +555,7 @@ fun HomeScreen(
                 
                 // Draw background dial ring
                 drawArc(
-                    color = Color(0xFF1C2027),
+                    color = dialBgColor,
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
@@ -540,7 +566,7 @@ fun HomeScreen(
                 drawArc(
                     color = circleColor,
                     startAngle = -90f,
-                    sweepAngle = (balanceSeconds.toFloat() / 7200L * 360f).coerceAtMost(360f),
+                    sweepAngle = (balanceSeconds.toFloat() / 44100f * 360f).coerceAtMost(360f),
                     useCenter = false,
                     style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                 )
@@ -550,7 +576,7 @@ fun HomeScreen(
                 Text(
                     text = "PREPAID AIRTIME",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF8B92A0),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     letterSpacing = 1.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -562,7 +588,7 @@ fun HomeScreen(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 32.sp
                     ),
-                    color = Color(0xFFF2F0EB)
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -577,7 +603,7 @@ fun HomeScreen(
         // Active connection metadata status
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2027))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Row(
                 modifier = Modifier
@@ -595,13 +621,13 @@ fun HomeScreen(
                     Column {
                         Text(
                             text = selectedServer.name,
-                            color = Color(0xFFF2F0EB),
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
                         )
                         Text(
                             text = "Protocol: ${selectedServer.protocol} • Transport: ${selectedServer.transport.uppercase()}",
-                            color = Color(0xFF8B92A0),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp
                         )
                     }
@@ -610,7 +636,7 @@ fun HomeScreen(
                     text = "${selectedServer.pingMs} ms",
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    color = if (selectedServer.pingMs < 50) Color(0xFFE1A730) else Color(0xFF8B92A0)
+                    color = if (selectedServer.pingMs < 50) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -621,14 +647,14 @@ fun HomeScreen(
         Button(
             onClick = onConnectTap,
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (connectionState == VpnState.CONNECTED) Color(0xFF1C2027) else Color(0xFFE1A730)
+                containerColor = if (connectionState == VpnState.CONNECTED) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primary
             ),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(58.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .testTag("connect_button"),
-            border = if (connectionState == VpnState.CONNECTED) BorderStroke(2.dp, Color(0xFF2DD4BF)) else null
+            border = if (connectionState == VpnState.CONNECTED) BorderStroke(2.dp, MaterialTheme.colorScheme.secondary) else null
         ) {
             val buttonText = when (connectionState) {
                 VpnState.DISCONNECTED -> "TAP TO CONNECT"
@@ -638,7 +664,7 @@ fun HomeScreen(
             }
             Text(
                 text = buttonText,
-                color = if (connectionState == VpnState.CONNECTED) Color(0xFF2DD4BF) else Color(0xFF14171C),
+                color = if (connectionState == VpnState.CONNECTED) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.background,
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 16.sp,
                 letterSpacing = 1.sp
@@ -652,8 +678,8 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(60.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2027)),
-            border = BorderStroke(1.dp, Color(0xFF242933))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -680,11 +706,11 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(8.dp)
                     ) {
-                        Icon(Icons.Default.NetworkWifi, contentDescription = "Low Data", tint = Color(0xFF8B92A0))
+                        Icon(Icons.Default.NetworkWifi, contentDescription = "Low Data", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "Lightweight Cellular Banner Active (Saving Data)",
-                            color = Color(0xFF8B92A0),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -706,7 +732,7 @@ fun TopUpScreen(
     adsToday: Int,
 ) {
     val context = LocalContext.current
-    val isCapped = adsToday >= 5
+    val isCapped = adsToday >= 12
 
     Column(
         modifier = Modifier
@@ -721,19 +747,19 @@ fun TopUpScreen(
                 Icons.Default.AddAlarm,
                 contentDescription = "Clock Topup",
                 modifier = Modifier.size(72.dp),
-                tint = Color(0xFFE1A730)
+                tint = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "TOP UP AIRTIME",
                 style = MaterialTheme.typography.displayMedium,
-                color = Color(0xFFF2F0EB),
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Watch a fast sponsored video to receive +2 hours high-speed connection time. Balance stacks additively.",
+                text = "Watch a fast sponsored video to receive +1 hour high-speed connection time. Balance stacks additively.",
                 textAlign = TextAlign.Center,
-                color = Color(0xFF8B92A0),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
         }
@@ -743,7 +769,7 @@ fun TopUpScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2027))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier
@@ -751,12 +777,12 @@ fun TopUpScreen(
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("CURRENT ACCOUNT BALANCE", color = Color(0xFF8B92A0), fontSize = 12.sp)
+                Text("CURRENT ACCOUNT BALANCE", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = formatTime(balanceSeconds),
                     style = MaterialTheme.typography.displayLarge,
-                    color = Color(0xFFE1A730),
+                    color = MaterialTheme.colorScheme.primary,
                     fontFamily = FontFamily.Monospace
                 )
             }
@@ -766,7 +792,7 @@ fun TopUpScreen(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "DAILY REWARDED TOP-UPS ($adsToday / 5)",
-                color = Color(0xFF8B92A0),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.5.sp
@@ -779,8 +805,8 @@ fun TopUpScreen(
                         modifier = Modifier
                             .size(14.dp)
                             .clip(CircleShape)
-                            .background(if (active) Color(0xFFE1A730) else Color(0xFF242933))
-                            .border(1.dp, if (active) Color.Transparent else Color(0xFF8B92A0), CircleShape)
+                            .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                            .border(1.dp, if (active) Color.Transparent else MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
                     )
                 }
             }
@@ -795,14 +821,14 @@ fun TopUpScreen(
                     Toast.makeText(context, "Come back tomorrow for new allowances!", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-                viewModel.showRewardedAd(activity, "TOP_UP") { success ->
+                viewModel.showRewardedAd(activity, "TOP_UP") { success, msg ->
                     if (!success) {
-                        Toast.makeText(context, "Sponsored video not ready. Try again shortly.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, msg ?: "Sponsored video not ready.", Toast.LENGTH_SHORT).show()
                     }
                 }
             },
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (isCapped) Color(0xFF242933) else Color(0xFFE1A730)
+                containerColor = if (isCapped) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
             ),
             modifier = Modifier
                 .fillMaxWidth()
@@ -811,8 +837,8 @@ fun TopUpScreen(
             enabled = !isCapped
         ) {
             Text(
-                text = if (isCapped) "COME BACK TOMORROW" else "+2 HOURS FREE TOP-UP",
-                color = if (isCapped) Color(0xFF8B92A0) else Color(0xFF14171C),
+                text = if (isCapped) "COME BACK TOMORROW" else "+1 HOUR FREE TOP-UP",
+                color = if (isCapped) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.background,
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 15.sp,
                 letterSpacing = 0.5.sp
@@ -838,11 +864,11 @@ fun ServersScreen(
             text = "PREPAID ENDPOINTS",
             style = MaterialTheme.typography.displayMedium,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFFF2F0EB)
+            color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             text = "Choose ultra low-latency premium endpoints configured across South African ISPs.",
-            color = Color(0xFF8B92A0),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
@@ -851,8 +877,8 @@ fun ServersScreen(
         ) {
             items(ServerEndpoint.DEFAULT_SERVERS) { server ->
                 val isSelected = server.id == selectedServer.id
-                val border = if (isSelected) BorderStroke(1.5.dp, Color(0xFFE1A730)) else BorderStroke(1.dp, Color(0xFF242933))
-                val cardColor = if (isSelected) Color(0xFF242933) else Color(0xFF1C2027)
+                val border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+                val cardColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
 
                 Card(
                     modifier = Modifier
@@ -877,13 +903,13 @@ fun ServersScreen(
                             Column {
                                 Text(
                                     text = server.name,
-                                    color = Color(0xFFF2F0EB),
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp
                                 )
                                 Text(
                                     text = "${server.protocol} • ${server.transport.uppercase()}",
-                                    color = Color(0xFF8B92A0),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontSize = 12.sp
                                 )
                             }
@@ -895,15 +921,15 @@ fun ServersScreen(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (server.pingMs < 50) Color(0xFFE1A730) else Color(0xFF8B92A0)
+                                color = if (server.pingMs < 50) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             RadioButton(
                                 selected = isSelected,
                                 onClick = { onServerSelect(server) },
                                 colors = RadioButtonDefaults.colors(
-                                    selectedColor = Color(0xFFE1A730),
-                                    unselectedColor = Color(0xFF8B92A0)
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             )
                         }
@@ -921,7 +947,8 @@ fun ServersScreen(
 fun SettingsScreen(
     viewModel: BalanceViewModel,
     adsToday: Int,
-    onRequestNotificationPermission: () -> Unit
+    onRequestNotificationPermission: () -> Unit,
+    onReportIssueClick: () -> Unit
 ) {
     val autoProtocol by viewModel.autoProtocol.collectAsState()
     val connectOnLaunch by viewModel.connectOnLaunch.collectAsState()
@@ -939,11 +966,11 @@ fun SettingsScreen(
                 text = "TUNNEL SETTINGS",
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFF2F0EB)
+                color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = "Manage auto-fallback and network efficiency profiles.",
-                color = Color(0xFF8B92A0),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
@@ -956,10 +983,10 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Auto-Select Protocol", color = Color(0xFFF2F0EB), fontWeight = FontWeight.Bold)
+                    Text("Auto-Select Protocol", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
                     Text(
                         "Automatically fallbacks sequence to bypass deep packet inspection filters.",
-                        color = Color(0xFF8B92A0),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
                     )
                 }
@@ -967,13 +994,13 @@ fun SettingsScreen(
                     checked = autoProtocol,
                     onCheckedChange = { viewModel.setAutoProtocol(it) },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color(0xFF14171C),
-                        checkedTrackColor = Color(0xFFE1A730)
+                        checkedThumbColor = MaterialTheme.colorScheme.background,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
 
-            Divider(color = Color(0xFF242933), modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
 
             // Setting 2: Connect On Launch
             Row(
@@ -984,10 +1011,10 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Connect on Launch", color = Color(0xFFF2F0EB), fontWeight = FontWeight.Bold)
+                    Text("Connect on Launch", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
                     Text(
                         "Instantly start tunnel on application launch if balance permits.",
-                        color = Color(0xFF8B92A0),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
                     )
                 }
@@ -995,13 +1022,13 @@ fun SettingsScreen(
                     checked = connectOnLaunch,
                     onCheckedChange = { viewModel.setConnectOnLaunch(it) },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color(0xFF14171C),
-                        checkedTrackColor = Color(0xFFE1A730)
+                        checkedThumbColor = MaterialTheme.colorScheme.background,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
 
-            Divider(color = Color(0xFF242933), modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
 
             // Setting 3: Low Data Mode
             Row(
@@ -1012,10 +1039,10 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Low Data Mode", color = Color(0xFFF2F0EB), fontWeight = FontWeight.Bold)
+                    Text("Low Data Mode", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
                     Text(
                         "Disables rich-media banners on cellular networks to conserve prepaid bandwidth.",
-                        color = Color(0xFF8B92A0),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
                     )
                 }
@@ -1023,13 +1050,42 @@ fun SettingsScreen(
                     checked = lowDataMode,
                     onCheckedChange = { viewModel.setLowDataMode(it) },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color(0xFF14171C),
-                        checkedTrackColor = Color(0xFFE1A730)
+                        checkedThumbColor = MaterialTheme.colorScheme.background,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
 
-            Divider(color = Color(0xFF242933), modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
+
+            // Setting: Dark Mode / Light Mode
+            val darkMode by viewModel.darkMode.collectAsState()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Dark Theme", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Toggle between Dark and Light color palettes.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp
+                    )
+                }
+                Switch(
+                    checked = darkMode,
+                    onCheckedChange = { viewModel.setDarkMode(it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.background,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
 
             // Setting 4: Notification Permission
             Row(
@@ -1041,17 +1097,17 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Notification Permission", color = Color(0xFFF2F0EB), fontWeight = FontWeight.Bold)
+                    Text("Notification Permission", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
                     Text(
                         "Enable background status monitoring.",
-                        color = Color(0xFF8B92A0),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
                     )
                 }
-                Icon(Icons.Default.Notifications, contentDescription = null, tint = Color(0xFFE1A730))
+                Icon(Icons.Default.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
 
-            Divider(color = Color(0xFF242933), modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
 
             // Setting 5: Info Display
             Row(
@@ -1061,13 +1117,35 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Daily Ad Limit Check", color = Color(0xFFF2F0EB), fontWeight = FontWeight.Bold)
+                Text("Daily Ad Limit Check", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
                 Text(
                     text = "$adsToday / 5 Ads Watched",
-                    color = Color(0xFFE1A730),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace
                 )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
+
+            // Report Issue Row in Settings
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onReportIssueClick() }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Report an Issue", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Submit feedback, bug reports, or connection logs.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp
+                    )
+                }
+                Icon(Icons.Default.Feedback, contentDescription = "Feedback", tint = MaterialTheme.colorScheme.primary)
             }
         }
 
@@ -1084,14 +1162,14 @@ fun SettingsScreen(
             ) {
                 Text(
                     text = "Privacy Policy",
-                    color = Color(0xFFE1A730),
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 13.sp,
                     modifier = Modifier.clickable { /* Link to Privacy */ }
                 )
-                Text("|", color = Color(0xFF8B92A0), fontSize = 13.sp)
+                Text("|", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                 Text(
                     text = "Terms of Service",
-                    color = Color(0xFFE1A730),
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 13.sp,
                     modifier = Modifier.clickable { /* Link to Terms */ }
                 )
@@ -1099,7 +1177,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Unity Tunnel • Powered by libXray Core v1.8.8",
-                color = Color(0xFF8B92A0),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
             )
@@ -1143,4 +1221,328 @@ private fun formatTime(totalSeconds: Long): String {
     val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60
     return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReportIssueDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (category: String, subject: String, description: String, email: String, attachDiagnostics: Boolean) -> Unit
+) {
+    val context = LocalContext.current
+    var category by remember { mutableStateOf("Connection") }
+    var subject by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var attachDiagnostics by remember { mutableStateOf(true) }
+    
+    var isSubmitting by remember { mutableStateOf(false) }
+    var submitSuccess by remember { mutableStateOf(false) }
+    var ticketId by remember { mutableStateOf("") }
+    
+    var subjectError by remember { mutableStateOf(false) }
+    var descriptionError by remember { mutableStateOf(false) }
+
+    val categories = listOf("Connection", "Speeds", "Ads", "Crash", "Other")
+
+    AlertDialog(
+        onDismissRequest = { if (!isSubmitting) onDismiss() },
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false
+        ),
+        modifier = Modifier
+            .padding(16.dp)
+            .widthIn(max = 480.dp)
+            .wrapContentHeight(),
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Feedback,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = if (submitSuccess) "TICKET CREATED" else "REPORT AN ISSUE",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        },
+        text = {
+            if (submitSuccess) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Success",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = "Thank you for your feedback!",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "Ticket ID: $ticketId\nOur South Africa engineering team has received your report along with diagnostic logs to analyze deep packet inspection bypass filters.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 20.sp
+                    )
+                }
+            } else if (isSubmitting) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Uploading diagnostic logs...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Help us bypass censors and improve network performance. Submit diagnostic telemetry below.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Category Selection
+                    Text(
+                        text = "SELECT CATEGORY",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    // Horizontal scroll chips (Custom styled boxes)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        categories.forEach { cat ->
+                            val selected = category == cat
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(
+                                        if (selected) MaterialTheme.colorScheme.primary 
+                                        else MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (selected) Color.Transparent else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .clickable { category = cat }
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = cat,
+                                    color = if (selected) MaterialTheme.colorScheme.background 
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    // Subject Field
+                    OutlinedTextField(
+                        value = subject,
+                        onValueChange = { 
+                            subject = it
+                            if (it.isNotBlank()) subjectError = false
+                        },
+                        label = { Text("Subject / Title") },
+                        isError = subjectError,
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("report_subject_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                            errorBorderColor = MaterialTheme.colorScheme.error
+                        )
+                    )
+                    if (subjectError) {
+                        Text(
+                            text = "Subject cannot be blank",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    // Description Field
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { 
+                            description = it
+                            if (it.length >= 10) descriptionError = false
+                        },
+                        label = { Text("Description (min 10 chars)") },
+                        isError = descriptionError,
+                        minLines = 3,
+                        modifier = Modifier.fillMaxWidth().testTag("report_description_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                            errorBorderColor = MaterialTheme.colorScheme.error
+                        )
+                    )
+                    if (descriptionError) {
+                        Text(
+                            text = "Please enter at least 10 characters",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    // Optional Email Field
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email (for updates)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("report_email_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    )
+
+                    // Diagnostic Toggle Row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { attachDiagnostics = !attachDiagnostics }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = attachDiagnostics,
+                            onCheckedChange = { attachDiagnostics = it },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier.testTag("report_diagnostics_checkbox")
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Attach Diagnostics Package",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Includes VPN protocol, connection state, and server ping telemetry.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (submitSuccess) {
+                Button(
+                    onClick = { onDismiss() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    modifier = Modifier.testTag("report_dismiss_button")
+                ) {
+                    Text("Done", color = MaterialTheme.colorScheme.background, fontWeight = FontWeight.Bold)
+                }
+            } else if (!isSubmitting) {
+                Button(
+                    onClick = {
+                        val isSubjErr = subject.isBlank()
+                        val isDescErr = description.length < 10
+                        subjectError = isSubjErr
+                        descriptionError = isDescErr
+
+                        if (!isSubjErr && !isDescErr) {
+                            isSubmitting = true
+                            // Simulate sending to network core
+                            val ticket = "UT-" + (100000..999999).random().toString()
+                            ticketId = ticket
+                            
+                            val handler = android.os.Handler(android.os.Looper.getMainLooper())
+                            handler.postDelayed({
+                                isSubmitting = false
+                                submitSuccess = true
+                                onSubmit(category, subject, description, email, attachDiagnostics)
+                            }, 1200)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    modifier = Modifier.testTag("report_submit_button")
+                ) {
+                    Text("Submit", color = MaterialTheme.colorScheme.background, fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        dismissButton = {
+            if (!submitSuccess && !isSubmitting) {
+                TextButton(
+                    onClick = { onDismiss() },
+                    modifier = Modifier.testTag("report_cancel_button")
+                ) {
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    )
 }

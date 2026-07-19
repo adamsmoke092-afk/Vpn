@@ -10,6 +10,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
+import androidx.compose.ui.graphics.Color
+
 private val DarkColorScheme = darkColorScheme(
   primary = GoldColor,
   onPrimary = BgColor,
@@ -24,15 +26,27 @@ private val DarkColorScheme = darkColorScheme(
   tertiary = TealColor
 )
 
-private val LightColorScheme = DarkColorScheme // Keep same style for cohesive dark-only prepaid dashboard
+private val LightColorScheme = lightColorScheme(
+  primary = LightGoldColor,
+  onPrimary = Color.White,
+  secondary = LightTealColor,
+  onSecondary = Color.White,
+  background = LightBgColor,
+  onBackground = LightTextColor,
+  surface = LightSurfaceColor,
+  onSurface = LightTextColor,
+  surfaceVariant = LightSurfaceAltColor,
+  onSurfaceVariant = LightTextDimColor,
+  tertiary = LightTealColor
+)
 
 @Composable
 fun MyApplicationTheme(
-  darkTheme: Boolean = true, // Force dark prepaid theme
+  darkTheme: Boolean = true,
   dynamicColor: Boolean = false, // Disable dynamic colors to preserve brand identity
   content: @Composable () -> Unit,
 ) {
-  val colorScheme = DarkColorScheme
+  val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
   MaterialTheme(
     colorScheme = colorScheme,

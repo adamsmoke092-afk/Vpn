@@ -47,17 +47,28 @@ object AdManager {
 
     private var cachedPreferencesManager: PreferencesManager? = null
 
+    private var isInitializing = false
+    private val pendingCallbacks = mutableListOf<() -> Unit>()
+
     fun initialize(context: Context, onComplete: () -> Unit = {}) {
         if (_isInitialized.value) {
-            onComplete()
+            Handler(Looper.getMainLooper()).post { onComplete() }
             return
         }
+        
+        pendingCallbacks.add(onComplete)
+        if (isInitializing) return
+        isInitializing = true
         
         AppLovinSdk.getInstance(context).mediationProvider = "max"
         AppLovinSdk.initializeSdk(context) { configuration ->
             Log.d(TAG, "AppLovin MAX initialized")
-            _isInitialized.value = true
-            onComplete()
+            Handler(Looper.getMainLooper()).post {
+                _isInitialized.value = true
+                isInitializing = false
+                pendingCallbacks.forEach { it.invoke() }
+                pendingCallbacks.clear()
+            }
         }
     }
 
@@ -93,7 +104,6 @@ object AdManager {
         }
         if (!MAX_CONNECTING_INTERSTITIAL_AD_UNIT_ID.startsWith("YOUR_")) { connectingInterstitialAd?.loadAd() }
     }
-
     fun showConnectingInterstitial(onClosed: () -> Unit) {
         if (connectingInterstitialAd?.isReady == true) {
             onConnectingAdClosed = onClosed
@@ -132,7 +142,6 @@ object AdManager {
         }
         if (!MAX_DISCONNECT_INTERSTITIAL_AD_UNIT_ID.startsWith("YOUR_")) { disconnectInterstitialAd?.loadAd() }
     }
-
     fun showDisconnectInterstitial(onClosed: () -> Unit) {
         if (disconnectInterstitialAd?.isReady == true) {
             onDisconnectAdClosed = onClosed
@@ -176,7 +185,6 @@ object AdManager {
         }
         if (!MAX_APP_OPEN_AD_UNIT_ID.startsWith("YOUR_")) { appOpenAd?.loadAd() }
     }
-
     fun showAppOpenAdIfAvailable(preferencesManager: PreferencesManager, onClosed: () -> Unit = {}) {
         CoroutineScope(Dispatchers.Main).launch {
             val lastShown = preferencesManager.lastOpenAdTime.first()
