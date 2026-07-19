@@ -54,7 +54,6 @@ import com.unitytunnel.app.viewmodel.VpnState
 //import com.google.android.gms.ads.AdView
 import kotlinx.coroutines.launch
 import java.util.Locale
-import com.unitytunnel.app.ads.RewardedAdService
 
 class MainActivity : ComponentActivity() {
 
@@ -113,7 +112,6 @@ fun MainAppLayout(
     val lowDataMode by viewModel.lowDataMode.collectAsState()
     val showDoubleUpDialog by viewModel.showDoubleUpDialog.collectAsState()
 
-    val rewardedAdService = remember { RewardedAdService(activity, viewModel) }
 
     var activeTab by remember { mutableStateOf(0) }
 
@@ -400,7 +398,6 @@ fun MainAppLayout(
                         viewModel = viewModel,
                         balanceSeconds = balanceSeconds,
                         adsToday = adsToday,
-                        rewardedAdService = rewardedAdService
                     )
                     2 -> ServersScreen(
                         selectedServer = selectedServer,
@@ -439,11 +436,13 @@ fun MainAppLayout(
                             Button(
                                 onClick = {
                                     // Watch second ad
-                                    rewardedAdService.loadAd(onLoaded = {
-                                        rewardedAdService.showAdForDoubleUp(onClosed = {
+                                    viewModel.showRewardedAd(activity, "DOUBLE_UP") { success ->
+                                        if (success) {
                                             viewModel.dismissDoubleUpOffer()
-                                        })
-                                    })
+                                        } else {
+                                            Toast.makeText(context, "Ad not ready or failed to show. Try again shortly.", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE1A730))
                             ) {
@@ -705,7 +704,6 @@ fun TopUpScreen(
     viewModel: BalanceViewModel,
     balanceSeconds: Long,
     adsToday: Int,
-    rewardedAdService: RewardedAdService
 ) {
     val context = LocalContext.current
     val isCapped = adsToday >= 5
@@ -797,14 +795,11 @@ fun TopUpScreen(
                     Toast.makeText(context, "Come back tomorrow for new allowances!", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-                // Preload ad
-                rewardedAdService.loadAd(onLoaded = {
-                    rewardedAdService.showAdForTopUp(onClosed = {}, onFailure = {
-                        Toast.makeText(context, "Failed to present sponsored video. Try again shortly.", Toast.LENGTH_SHORT).show()
-                    })
-                }, onFailure = { err ->
-                    Toast.makeText(context, "No available sponsored video fill: $err", Toast.LENGTH_SHORT).show()
-                })
+                viewModel.showRewardedAd(activity, "TOP_UP") { success ->
+                    if (!success) {
+                        Toast.makeText(context, "Sponsored video not ready. Try again shortly.", Toast.LENGTH_SHORT).show()
+                    }
+                }
             },
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (isCapped) Color(0xFF242933) else Color(0xFFE1A730)

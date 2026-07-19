@@ -96,11 +96,23 @@ class UnityTunnelVpnService : VpnService() {
                 builder.setMetered(lowData)
             }
             
+            try {
+                builder.addDisallowedApplication(packageName)
+            } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
+                Log.e(TAG, "Failed to exclude app from VPN: ${e.message}")
+            }
+            
             vpnInterface = builder.setSession("UnityTunnelSession")
                 .setConfigureIntent(getConfigureIntent())
                 .establish()
 
             Log.d(TAG, "TUN Interface established: $vpnInterface")
+            
+            if (vpnInterface == null) {
+                Log.e(TAG, "VpnService.establish() returned null. Permission might be missing.")
+                stopVpn()
+                return
+            }
 
             // 2. Start Xray-core subprocess with generated JSON config
             val sampleServer = ServerEndpoint("active-id", serverName, "SA", "🇿🇦", "VLESS", "ws", host, port, 20)

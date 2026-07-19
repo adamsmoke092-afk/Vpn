@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/shield_u_logo_metallic_1784107415023"
+        android:drawable="@drawable/img_premium_shield_icon_1784482071138"
         android:gravity="center" />
 </layer-list>

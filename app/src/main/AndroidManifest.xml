@@ -48,7 +48,7 @@
             android:name="com.unitytunnel.app.vpn.UnityTunnelVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:foregroundServiceType="systemExempted"
-            android:exported="false"
+            android:exported="true"
             tools:ignore="ForegroundServicePermission">
             <intent-filter>
                 <action android:name="android.net.VpnService" />

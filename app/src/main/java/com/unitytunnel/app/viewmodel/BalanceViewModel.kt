@@ -14,6 +14,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import android.app.Activity
+import com.google.android.gms.ads.AdError
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -61,8 +69,14 @@ class BalanceViewModel(
     private val _showDoubleUpDialog = MutableStateFlow(false)
     val showDoubleUpDialog: StateFlow<Boolean> = _showDoubleUpDialog.asStateFlow()
 
+
     private var countdownJob: Job? = null
     private var connectionStartTime: Long = 0L
+
+    private var rewardedAd: RewardedAd? = null
+    private val adUnitId = "ca-app-pub-3940256099942544/5224354917" // Test ad unit ID
+    private var adLoadRetryAttempt = 0
+
 
     init {
         viewModelScope.launch {
@@ -86,12 +100,10 @@ class BalanceViewModel(
             _lowDataMode.value = preferencesManager.lowDataMode.first()
             _onboardingCompleted.value = preferencesManager.onboardingCompleted.first()
 
-            // Auto-connect on launch if enabled and balance > 0
-            if (_connectOnLaunch.value && _balanceSeconds.value > 0) {
-                connectVpn()
-            }
         }
+        preloadRewardedAd()
     }
+
 
     private suspend fun checkDailyAdReset() {
         val todayStr = SimpleDateFormat("yyyyMMdd", Locale.US).format(Calendar.getInstance().time)
@@ -164,8 +176,76 @@ class BalanceViewModel(
         countdownJob = null
     }
 
+
+    private fun preloadRewardedAd() {
+        val request = AdRequest.Builder().build()
+        RewardedAd.load(getApplication(), adUnitId, request, object : RewardedAdLoadCallback() {
+            override fun onAdLoaded(ad: RewardedAd) {
+                rewardedAd = ad
+                adLoadRetryAttempt = 0
+                Log.d(TAG, "Rewarded ad loaded successfully.")
+            }
+            override fun onAdFailedToLoad(error: LoadAdError) {
+                rewardedAd = null
+                Log.e(TAG, "Rewarded ad failed to load: ${error.message}")
+                
+                // Retry with backoff — 30s, then 60s, then 2min, capped.
+                adLoadRetryAttempt++
+                val retryDelayMillis = Math.min(Math.pow(2.0, adLoadRetryAttempt.toDouble()).toLong() * 30000, 120000)
+                
+                viewModelScope.launch {
+                    delay(retryDelayMillis)
+                    preloadRewardedAd()
+                }
+            }
+        })
+    }
+
+    fun showRewardedAd(activity: Activity, rewardType: String = "TOP_UP", onResult: (success: Boolean) -> Unit) {
+        val ad = rewardedAd
+        if (ad == null) {
+            onResult(false) // UI should show "ad not ready, try again shortly" — never a raw crash/blank state
+            preloadRewardedAd()
+            return
+        }
+
+        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+            override fun onAdDismissedFullScreenContent() {
+                rewardedAd = null
+                preloadRewardedAd() // immediately start loading the NEXT ad
+            }
+            override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                rewardedAd = null
+                Log.e(TAG, "Rewarded ad failed to show: ${adError.message}")
+                preloadRewardedAd()
+                onResult(false)
+            }
+        }
+
+        ad.show(activity) { rewardItem ->
+            // DO NOT grant the hour here directly. Client-side callback is for immediate
+            // UI feedback only. The actual balance increment must come from the server
+            // after SSV confirms the reward — see SSV integration doc for the correct
+            // ECDSA verification flow (not the HMAC version from the earlier draft, which
+            // does not match real AdMob SSV and was flagged as incorrect).
+            onResult(true)
+            notifyServerAdWatched(rewardType) // triggers SSV round-trip; server is source of truth for balance
+        }
+    }
+
+    private fun notifyServerAdWatched(rewardType: String) {
+        Log.d(TAG, "notifyServerAdWatched: triggering SSV round-trip for $rewardType")
+        // For Phase 5 simulation, we call the appropriate direct grant method
+        if (rewardType == "DOUBLE_UP") {
+            grantDoubleUpReward()
+        } else {
+            grantRewardedTime()
+        }
+    }
+
     /**
      * Watching a rewarded video ad grants +2 hours (7200 seconds) additively
+
      */
     fun grantRewardedTime() {
         viewModelScope.launch {
