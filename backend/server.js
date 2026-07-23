@@ -22,13 +22,29 @@ app.use(bodyParser.json({
 // HMAC Middleware
 const verifySignature = (req, res, next) => {
     const signature = req.headers['x-signature'];
-    if (!signature) {
-        return res.status(401).json({ error: 'Missing signature' });
+    const timestamp = req.headers['x-timestamp'];
+    
+    if (!signature || !timestamp) {
+        return res.status(401).json({ error: 'Missing signature or timestamp' });
     }
+
+    // Replay protection: check timestamp (within 5 minutes = 300 seconds)
+    const currentUnixTime = Math.floor(Date.now() / 1000);
+    const reqTime = parseInt(timestamp, 10);
+    
+    if (isNaN(reqTime)) {
+        return res.status(401).json({ error: 'Invalid timestamp format' });
+    }
+    
+    if (Math.abs(currentUnixTime - reqTime) > 300) {
+        return res.status(401).json({ error: 'Request expired or timestamp out of bounds' });
+    }
+
+    const payloadToSign = `${timestamp}.${req.rawBody || ''}`;
 
     const expectedSignature = crypto
         .createHmac('sha256', API_SECRET)
-        .update(req.rawBody || '')
+        .update(payloadToSign)
         .digest('hex');
 
     try {
