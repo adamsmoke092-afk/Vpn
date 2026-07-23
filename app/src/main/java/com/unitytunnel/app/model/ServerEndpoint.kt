@@ -1,5 +1,8 @@
 package com.unitytunnel.app.model
 
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
 data class ServerEndpoint(
     val id: String,
     val name: String,

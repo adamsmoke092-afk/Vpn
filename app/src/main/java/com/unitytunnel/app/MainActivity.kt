@@ -55,6 +55,16 @@ import com.unitytunnel.app.viewmodel.VpnState
 import kotlinx.coroutines.launch
 import java.util.Locale
 
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import kotlinx.coroutines.delay
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.unitytunnel.app.data.UiPreferences
+
 class MainActivity : ComponentActivity() {
 
     private lateinit var preferencesManager: PreferencesManager
@@ -105,6 +115,40 @@ fun MainAppLayout(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+
+    val uiPreferences = remember { UiPreferences(context) }
+    val customDns by uiPreferences.customDns.collectAsState(initial = "ISP Default")
+    val serversJson by uiPreferences.serversJson.collectAsState(initial = null)
+    
+    val moshi = remember { Moshi.Builder().build() }
+    val listType = Types.newParameterizedType(List::class.java, ServerEndpoint::class.java)
+    val adapter = moshi.adapter<List<ServerEndpoint>>(listType)
+    
+    val serversList = remember(serversJson) {
+        if (serversJson.isNullOrEmpty()) {
+            ServerEndpoint.DEFAULT_SERVERS
+        } else {
+            try { adapter.fromJson(serversJson!!) ?: ServerEndpoint.DEFAULT_SERVERS }
+            catch (e: Exception) { ServerEndpoint.DEFAULT_SERVERS }
+        }
+    }
+    
+    var isSyncing by remember { mutableStateOf(false) }
+    val onSyncClick: () -> Unit = {
+        if (!isSyncing) {
+            isSyncing = true
+            coroutineScope.launch {
+                kotlinx.coroutines.delay(1500) // Simulate network
+                isSyncing = false
+                Toast.makeText(context, "Server list updated", Toast.LENGTH_SHORT).show()
+                uiPreferences.setServersJson(adapter.toJson(ServerEndpoint.DEFAULT_SERVERS))
+            }
+        }
+    }
+    
+    var showDnsSheet by remember { mutableStateOf(false) }
+    
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val connectionState by viewModel.connectionState.collectAsState()
     val balanceSeconds by viewModel.balanceSeconds.collectAsState()
@@ -300,6 +344,26 @@ fun MainAppLayout(
 
                     Spacer(modifier = Modifier.weight(1f))
                     
+                    
+                    Divider(modifier = Modifier.padding(vertical = 16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                coroutineScope.launch { drawerState.close() }
+                                showDnsSheet = true
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Custom DNS", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
+                            Text(customDns, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                        }
+                        Icon(Icons.Default.ChevronRight, contentDescription = "Edit DNS", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    
                     Text(
                         text = "Version 1.0.4 (South Africa Core)",
                         style = MaterialTheme.typography.labelMedium,
@@ -328,12 +392,27 @@ fun MainAppLayout(
                             Icon(Icons.Default.Menu, contentDescription = "Menu", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
+                    actions = {
+                        if (activeTab == 0 || activeTab == 2) {
+                            IconButton(onClick = onSyncClick) {
+                                if (isSyncing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(Icons.Default.Sync, contentDescription = "Sync", tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    },
+
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background
                     )
                 )
-            },
-            bottomBar = {
+            },            bottomBar = {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 8.dp
@@ -405,8 +484,7 @@ fun MainAppLayout(
                         connectionState = connectionState,
                         balanceSeconds = balanceSeconds,
                         selectedServer = selectedServer,
-                        onConnectTap = onConnectTap
-                    )
+                        onConnectTap = onConnectTap)
                     1 -> TopUpScreen(
                         activity = activity,
                         viewModel = viewModel,
@@ -415,6 +493,7 @@ fun MainAppLayout(
                     )
                     2 -> ServersScreen(
                         selectedServer = selectedServer,
+                        serversList = serversList,
                         onServerSelect = { server -> viewModel.selectServer(server) }
                     )
                     3 -> SettingsScreen(
@@ -440,6 +519,69 @@ fun MainAppLayout(
                 }
 
                 // Placement 4: "Double Up" Bonus Offer Dialog (Streak Multiplier)
+                if (showDnsSheet) {
+                    var customIp by remember { mutableStateOf("") }
+                    ModalBottomSheet(
+                        onDismissRequest = { showDnsSheet = false },
+                        sheetState = sheetState,
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ) {
+                        Column(modifier = Modifier.padding(24.dp).padding(bottom = 32.dp)) {
+                            Text("Custom DNS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
+                            val dnsOptions = listOf("ISP Default", "Google DNS (8.8.8.8)", "Cloudflare DNS (1.1.1.1)", "Quad9 (9.9.9.9)", "OpenDNS (208.67.222.222)", "Custom")
+                            dnsOptions.forEach { option ->
+                                val isSelected = customDns == option || (option == "Custom" && dnsOptions.none { it == customDns })
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().clickable {
+                                        if (option != "Custom") {
+                                            coroutineScope.launch {
+                                                uiPreferences.setCustomDns(option)
+                                                showDnsSheet = false
+                                                Toast.makeText(context, "DNS set to $option", Toast.LENGTH_SHORT).show()
+                                            }
+                                        } else {
+                                            coroutineScope.launch {
+                                                uiPreferences.setCustomDns("Custom")
+                                            }
+                                        }
+                                    }.padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = null,
+                                        colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Text(option, color = MaterialTheme.colorScheme.onBackground)
+                                }
+                            }
+                            if (customDns.startsWith("Custom") || customDns.matches(Regex("^[0-9.]+$")) && dnsOptions.none { it == customDns }) {
+                                OutlinedTextField(
+                                    value = customIp,
+                                    onValueChange = { customIp = it },
+                                    label = { Text("Enter DNS IP") },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                )
+                                Button(
+                                    onClick = {
+                                        if (customIp.isNotBlank()) {
+                                            coroutineScope.launch {
+                                                uiPreferences.setCustomDns(customIp)
+                                                showDnsSheet = false
+                                                Toast.makeText(context, "DNS set to $customIp", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                ) {
+                                    Text("Save")
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (showDoubleUpDialog) {
                     AlertDialog(
                         onDismissRequest = { viewModel.dismissDoubleUpOffer() },
@@ -518,9 +660,9 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.Top
     ) {
         if (isDevMode) {
             Box(
@@ -625,11 +767,7 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
                         )
-                        Text(
-                            text = "Protocol: ${selectedServer.protocol} • Transport: ${selectedServer.transport.uppercase()}",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 12.sp
-                        )
+                        /* Protocol hidden */
                     }
                 }
                 Text(
@@ -641,7 +779,7 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Big Connect / Disconnect trigger Button
         Button(
@@ -742,27 +880,6 @@ fun TopUpScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Default.AddAlarm,
-                contentDescription = "Clock Topup",
-                modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "TOP UP AIRTIME",
-                style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Watch a fast sponsored video to receive +1 hour high-speed connection time. Balance stacks additively.",
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 12.dp)
-            )
-        }
 
         // Timer feedback container
         Card(
@@ -853,6 +970,7 @@ fun TopUpScreen(
 @Composable
 fun ServersScreen(
     selectedServer: ServerEndpoint,
+    serversList: List<ServerEndpoint>,
     onServerSelect: (ServerEndpoint) -> Unit
 ) {
     Column(
@@ -869,13 +987,13 @@ fun ServersScreen(
         Text(
             text = "Choose ultra low-latency premium endpoints configured across South African ISPs.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 8.dp)
         )
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            items(ServerEndpoint.DEFAULT_SERVERS) { server ->
+            items(serversList) { server ->
                 val isSelected = server.id == selectedServer.id
                 val border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
                 val cardColor = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
@@ -907,11 +1025,7 @@ fun ServersScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp
                                 )
-                                Text(
-                                    text = "${server.protocol} • ${server.transport.uppercase()}",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 12.sp
-                                )
+                                /* Protocol hidden */
                             }
                         }
                         
@@ -1251,7 +1365,7 @@ fun ReportIssueDialog(
             usePlatformDefaultWidth = false
         ),
         modifier = Modifier
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
             .widthIn(max = 480.dp)
             .wrapContentHeight(),
         containerColor = MaterialTheme.colorScheme.surface,
