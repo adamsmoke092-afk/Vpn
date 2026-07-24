@@ -48,6 +48,7 @@ import com.unitytunnel.app.model.ServerEndpoint
 import com.unitytunnel.app.ui.theme.MyApplicationTheme
 import com.unitytunnel.app.vpn.UnityTunnelVpnService
 import com.unitytunnel.app.viewmodel.BalanceViewModel
+import com.unitytunnel.app.viewmodel.DAILY_AD_CAP
 import com.unitytunnel.app.viewmodel.VpnState
 //import com.google.android.gms.ads.AdRequest
 //import com.google.android.gms.ads.AdSize
@@ -870,7 +871,7 @@ fun TopUpScreen(
     adsToday: Int,
 ) {
     val context = LocalContext.current
-    val isCapped = adsToday >= 12
+    val isCapped = adsToday >= DAILY_AD_CAP
 
     Column(
         modifier = Modifier
@@ -905,28 +906,28 @@ fun TopUpScreen(
             }
         }
 
-        // Daily ad counter indicators (Dots cap 5/day)
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Daily ad counter indicators (Progress bar cap DAILY_AD_CAP/day)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text(
-                text = "DAILY REWARDED TOP-UPS ($adsToday / 5)",
+                text = "DAILY REWARDED TOP-UPS ($adsToday / $DAILY_AD_CAP)",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.5.sp
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (i in 1..5) {
-                    val active = i <= adsToday
-                    Box(
-                        modifier = Modifier
-                            .size(14.dp)
-                            .clip(CircleShape)
-                            .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, if (active) Color.Transparent else MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
-                    )
-                }
-            }
+            LinearProgressIndicator(
+                progress = { (adsToday.coerceAtMost(DAILY_AD_CAP).toFloat() / DAILY_AD_CAP.toFloat()) },
+                modifier = Modifier
+                    .width(240.dp)
+                    .height(8.dp)
+                    .clip(CircleShape),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -1233,7 +1234,7 @@ fun SettingsScreen(
             ) {
                 Text("Daily Ad Limit Check", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)
                 Text(
-                    text = "$adsToday / 5 Ads Watched",
+                    text = "$adsToday / $DAILY_AD_CAP Ads Watched",
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace

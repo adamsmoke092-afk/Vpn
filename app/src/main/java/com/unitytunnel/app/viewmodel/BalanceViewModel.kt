@@ -20,6 +20,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+const val DAILY_AD_CAP = 12
+
 enum class VpnState {
     DISCONNECTED,
     CONNECTING,
@@ -173,7 +175,7 @@ class BalanceViewModel(
 
 
     fun showRewardedAd(activity: Activity, rewardType: String = "TOP_UP", onResult: (success: Boolean, msg: String?) -> Unit) {
-        if (_adsToday.value >= 12) {
+        if (_adsToday.value >= DAILY_AD_CAP) {
             onResult(false, "Daily limit reached. Come back tomorrow.")
             return
         }
@@ -206,8 +208,8 @@ class BalanceViewModel(
         viewModelScope.launch {
             checkDailyAdReset()
             val currentAds = _adsToday.value
-            if (currentAds >= 12) {
-                Log.e(TAG, "Cannot grant reward: ad cap of 12/day exceeded")
+            if (currentAds >= DAILY_AD_CAP) {
+                Log.e(TAG, "Cannot grant reward: ad cap of $DAILY_AD_CAP/day exceeded")
                 return@launch
             }
 
